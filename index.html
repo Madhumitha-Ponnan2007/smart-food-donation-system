@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Smart Food Donation</title>
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       font-family: Arial, sans-serif;
       background: #f0f8f0;
@@ -12,25 +16,35 @@
       margin: 0;
       color: #23412c;
     }
+
     header {
       background: #247a45;
       color: white;
-      padding: 25px;
+      padding: 25px 15px;
     }
+
     .card {
       background: white;
-      margin: 30px auto;
+      margin: 25px auto;
       padding: 25px;
       border-radius: 15px;
-      max-width: 420px;
+      max-width: 450px;
+      width: calc(100% - 30px);
       box-shadow: 0 3px 12px #ccc;
     }
+
     input, button {
       padding: 12px;
-      margin: 8px;
-      width: 80%;
-      box-sizing: border-box;
+      margin: 8px 0;
+      width: 100%;
+      font-size: 16px;
     }
+
+    input {
+      border: 1px solid #bbb;
+      border-radius: 7px;
+    }
+
     button {
       background: #247a45;
       color: white;
@@ -38,7 +52,33 @@
       border-radius: 8px;
       cursor: pointer;
     }
-    #message { color: #247a45; }
+
+    button:hover {
+      background: #185c32;
+    }
+
+    .delete-btn {
+      width: auto;
+      background: #b83232;
+      padding: 9px 14px;
+    }
+
+    #message {
+      color: #247a45;
+      font-weight: bold;
+    }
+
+    .donation {
+      background: #f0f8f0;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 12px 0;
+      overflow-wrap: anywhere;
+    }
+
+    .empty {
+      color: #666;
+    }
   </style>
 </head>
 <body>
@@ -51,31 +91,153 @@
     <h2>Donate Surplus Food</h2>
     <p>Help reduce food waste and feed people in need.</p>
 
-    <input id="food" placeholder="Food name" />
-    <input id="quantity" type="number"
-      min="1" placeholder="Quantity of meals" />
-    <input id="location" placeholder="Pickup location" />
+    <form id="donationForm">
+      <input id="food" placeholder="Food name" maxlength="100" required>
 
-    <button onclick="donateFood()">Donate Food</button>
-    <p id="message"></p>
+      <input id="quantity" type="number"
+        min="1" max="100000" step="1"
+        placeholder="Quantity of meals" required>
+
+      <input id="location" placeholder="Pickup location"
+        maxlength="200" required>
+
+      <button type="submit">Donate Food</button>
+    </form>
+
+    <p id="message" role="status" aria-live="polite"></p>
+  </div>
+
+  <div class="card">
+    <h2>Available Donations</h2>
+    <p id="donationCount">Total donations: 0</p>
+    <div id="donationList"></div>
   </div>
 
   <script>
-    function donateFood() {
-      let food = document.getElementById("food").value.trim();
-      let quantity = document.getElementById("quantity").value;
-      let location = document.getElementById("location").value.trim();
+    const form = document.getElementById("donationForm");
+    const message = document.getElementById("message");
+    const donationList = document.getElementById("donationList");
+    const donationCount = document.getElementById("donationCount");
 
-      if (!food || !quantity || Number(quantity) < 1 || !location) {
-        document.getElementById("message").innerText =
+    let donations = [];
+
+    try {
+      const saved = localStorage.getItem("foodDonations");
+      donations = saved ? JSON.parse(saved) : [];
+
+      if (!Array.isArray(donations)) {
+        donations = [];
+      }
+    } catch (error) {
+      donations = [];
+    }
+
+    function saveDonations() {
+      try {
+        localStorage.setItem("foodDonations", JSON.stringify(donations));
+        return true;
+      } catch (error) {
+        message.textContent =
+          "Could not save data in this browser. Please check storage settings.";
+        return false;
+      }
+    }
+
+    function renderDonations() {
+      donationList.replaceChildren();
+      donationCount.textContent =
+        "Total donations: " + donations.length;
+
+      if (donations.length === 0) {
+        const empty = document.createElement("p");
+        empty.className = "empty";
+        empty.textContent = "No donations yet. Be the first to donate!";
+        donationList.appendChild(empty);
+        return;
+      }
+
+      donations.forEach(function(donation) {
+        const card = document.createElement("div");
+        card.className = "donation";
+
+        const name = document.createElement("h3");
+        name.textContent = donation.food;
+
+        const quantity = document.createElement("p");
+        quantity.textContent = "Meals: " + donation.quantity;
+
+        const location = document.createElement("p");
+        location.textContent = "Pickup location: " + donation.location;
+
+        const date = document.createElement("p");
+        date.textContent = "Added: " + donation.date;
+
+        const button = document.createElement("button");
+        button.className = "delete-btn";
+        button.textContent = "Delete";
+        button.type = "button";
+        button.addEventListener("click", function() {
+          deleteDonation(donation.id);
+        });
+
+        card.append(name, quantity, location, date, button);
+        donationList.appendChild(card);
+      });
+    }
+
+    form.addEventListener("submit", function(event) {
+      event.preventDefault();
+
+      const food = document.getElementById("food").value.trim();
+      const quantityInput = document.getElementById("quantity");
+      const quantity = Number(quantityInput.value);
+      const location = document.getElementById("location").value.trim();
+
+      if (!food || !location ||
+          !Number.isInteger(quantity) ||
+          quantity < 1 || quantity > 100000) {
+        message.textContent =
           "Please enter valid details in all fields.";
         return;
       }
 
-      document.getElementById("message").innerText =
-        "Thank you! " + quantity + " meals of " + food +
-        " are ready for donation at " + location + ".";
+      const donation = {
+        id: Date.now().toString() + Math.random().toString(16).slice(2),
+        food: food,
+        quantity: quantity,
+        location: location,
+        date: new Date().toLocaleString()
+      };
+
+      donations.unshift(donation);
+
+      if (!saveDonations()) {
+        donations.shift();
+        return;
+      }
+
+      renderDonations();
+      message.textContent =
+        "Thank you! Your food donation has been added successfully.";
+      form.reset();
+    });
+
+    function deleteDonation(id) {
+      const previous = donations;
+      donations = donations.filter(function(item) {
+        return item.id !== id;
+      });
+
+      if (!saveDonations()) {
+        donations = previous;
+        return;
+      }
+
+      renderDonations();
+      message.textContent = "Donation deleted successfully.";
     }
+
+    renderDonations();
   </script>
 </body>
 </html>
