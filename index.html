@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Food Donation</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f8f0;
+      text-align: center;
+      margin: 0;
+      color: #23412c;
+    }
+    header {
+      background: #247a45;
+      color: white;
+      padding: 25px;
+    }
+    .card {
+      background: white;
+      margin: 30px auto;
+      padding: 25px;
+      border-radius: 15px;
+      max-width: 420px;
+      box-shadow: 0 3px 12px #ccc;
+    }
+    input, button {
+      padding: 12px;
+      margin: 8px;
+      width: 80%;
+      box-sizing: border-box;
+    }
+    button {
+      background: #247a45;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    #message { color: #247a45; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🍲 Smart Food Donation</h1>
+    <p>Share Food, Spread Happiness</p>
+  </header>
+
+  <div class="card">
+    <h2>Donate Surplus Food</h2>
+    <p>Help reduce food waste and feed people in need.</p>
+
+    <input id="food" placeholder="Food name" />
+    <input id="quantity" type="number"
+      min="1" placeholder="Quantity of meals" />
+    <input id="location" placeholder="Pickup location" />
+
+    <button onclick="donateFood()">Donate Food</button>
+    <p id="message"></p>
+  </div>
+
+  <script>
+    function donateFood() {
+      let food = document.getElementById("food").value.trim();
+      let quantity = document.getElementById("quantity").value;
+      let location = document.getElementById("location").value.trim();
+
+      if (!food || !quantity || Number(quantity) < 1 || !location) {
+        document.getElementById("message").innerText =
+          "Please enter valid details in all fields.";
+        return;
+      }
+
+      document.getElementById("message").innerText =
+        "Thank you! " + quantity + " meals of " + food +
+        " are ready for donation at " + location + ".";
+    }
+  </script>
+</body>
+</html>
